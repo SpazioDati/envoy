@@ -52,10 +52,12 @@ class Command(object):
         self.data = None
         self.exc = None
 
-    def run(self, data, timeout, kill_timeout, env, cwd):
+    def run(self, data, timeout, kill_timeout, env, cwd, stdin=None):
         self.data = data
         environ = dict(os.environ)
         environ.update(env or {})
+
+        stdin = stdin or subprocess.PIPE
 
         def target():
 
@@ -64,7 +66,7 @@ class Command(object):
                     universal_newlines=True,
                     shell=False,
                     env=environ,
-                    stdin=subprocess.PIPE,
+                    stdin=stdin,
                     stdout=subprocess.PIPE,
                     stderr=subprocess.PIPE,
                     bufsize=0,
@@ -73,13 +75,13 @@ class Command(object):
 
                 if sys.version_info[0] >= 3:
                     self.out, self.err = self.process.communicate(
-                        input = bytes(self.data, "UTF-8") if self.data else None 
+                        input = bytes(self.data, "UTF-8") if self.data else None
                     )
                 else:
                     self.out, self.err = self.process.communicate(self.data)
             except Exception as exc:
                 self.exc = exc
-              
+
 
         thread = threading.Thread(target=target)
         thread.start()
@@ -195,29 +197,43 @@ def run(command, data=None, timeout=None, kill_timeout=None, env=None, cwd=None)
 
     Blocks until process is complete, or timeout is reached.
     """
+    environ = dict(os.environ)
+    environ.update(env or {})
 
-    command = expand_args(command)
+    commands = expand_args(command)
+    if not commands:
+        return None
 
     history = []
-    for c in command:
+    prev_stdout = None
+    for cmd in commands[:-1]:
+        process = subprocess.Popen(
+            cmd,
+            universal_newlines=True,
+            shell=False,
+            env=environ,
+            stdin=prev_stdout or subprocess.PIPE,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            bufsize=0,
+            cwd=cwd,
+        )
+        if prev_stdout:
+            prev_stdout.close()
+        prev_stdout = process.stdout
 
-        if len(history):
-            # due to broken pipe problems pass only first 10 KiB
-            data = history[-1].std_out[0:10*1024]
+        response = Response()
+        response.command = cmd
+        history.append(response)
 
-        cmd = Command(c)
-        out, err = cmd.run(data, timeout, kill_timeout, env, cwd)
+    cmd = Command(commands[-1])
+    out, err = cmd.run(data, timeout, kill_timeout, env, cwd, stdin=prev_stdout)
 
-        r = Response(process=cmd)
-
-        r.command = c
-        r.std_out = out
-        r.std_err = err
-        r.status_code = cmd.returncode
-
-        history.append(r)
-
-    r = history.pop()
+    r = Response(process=cmd)
+    r.command = cmd.cmd
+    r.std_out = out
+    r.std_err = err
+    r.status_code = cmd.returncode
     r.history = history
 
     return r
