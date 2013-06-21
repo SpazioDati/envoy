@@ -175,7 +175,7 @@ def expand_args(command):
 
     # Prepare arguments.
     if isinstance(command, str):
-        splitter = shlex.shlex(command)
+        splitter = shlex.shlex(command, posix=True)
         splitter.whitespace = '|'
         splitter.whitespace_split = True
         command = []
