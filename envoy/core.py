@@ -174,7 +174,7 @@ def expand_args(command):
     """Parses command strings and returns a Popen-ready list."""
 
     # Prepare arguments.
-    if isinstance(command, str):
+    if isinstance(command, basestring):
         splitter = shlex.shlex(command, posix=True)
         splitter.quotes = ''
         splitter.whitespace = '|'
