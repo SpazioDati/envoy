@@ -1,6 +1,6 @@
 import unittest
 import envoy
-import time
+
 
 class SimpleTest(unittest.TestCase):
 
@@ -25,6 +25,7 @@ class SimpleTest(unittest.TestCase):
         self.assertEqual(r.std_out.rstrip(), sentinel)
         self.assertEqual(r.status_code, 0)
 
+
 class ConnectedCommandTests(unittest.TestCase):
 
     def test_status_code_none(self):
@@ -47,6 +48,7 @@ class ConnectedCommandTests(unittest.TestCase):
         r.send(test_string)
         self.assertEqual(r.std_out, test_string.upper())
         self.assertEqual(r.status_code, 0)
+
 
 if __name__ == "__main__":
     unittest.main()
