@@ -109,7 +109,7 @@ class ConnectedCommand(object):
         self._process = process
         self.std_in = std_in
         self.std_out = std_out
-        self.std_err = std_out
+        self.std_err = std_err
         self._status_code = None
 
     def __enter__(self):
