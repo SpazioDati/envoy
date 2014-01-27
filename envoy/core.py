@@ -24,23 +24,28 @@ def _terminate_process(process):
     if sys.platform == 'win32':
         import ctypes
         PROCESS_TERMINATE = 1
-        handle = ctypes.windll.kernel32.OpenProcess(PROCESS_TERMINATE, False, process.pid)
+        handle = ctypes.windll.kernel32.OpenProcess(
+            PROCESS_TERMINATE, False, process.pid
+        )
         ctypes.windll.kernel32.TerminateProcess(handle, -1)
         ctypes.windll.kernel32.CloseHandle(handle)
     else:
         os.kill(process.pid, signal.SIGTERM)
 
+
 def _kill_process(process):
-   if sys.platform == 'win32':
-       _terminate_process(process)
-   else:
-       os.kill(process.pid, signal.SIGKILL)
+    if sys.platform == 'win32':
+        _terminate_process(process)
+    else:
+        os.kill(process.pid, signal.SIGKILL)
+
 
 def _is_alive(thread):
     if hasattr(thread, "is_alive"):
         return thread.is_alive()
     else:
         return thread.isAlive()
+
 
 class Command(object):
     def __init__(self, cmd):
@@ -62,7 +67,8 @@ class Command(object):
         def target():
 
             try:
-                self.process = subprocess.Popen(self.cmd,
+                self.process = subprocess.Popen(
+                    self.cmd,
                     universal_newlines=True,
                     shell=False,
                     env=environ,
@@ -75,13 +81,12 @@ class Command(object):
 
                 if sys.version_info[0] >= 3:
                     self.out, self.err = self.process.communicate(
-                        input = bytes(self.data, "UTF-8") if self.data else None
+                        input=bytes(self.data, "UTF-8") if self.data else None
                     )
                 else:
                     self.out, self.err = self.process.communicate(self.data)
             except Exception as exc:
                 self.exc = exc
-
 
         thread = threading.Thread(target=target)
         thread.start()
@@ -89,7 +94,7 @@ class Command(object):
         thread.join(timeout)
         if self.exc:
             raise self.exc
-        if _is_alive(thread) :
+        if _is_alive(thread):
             _terminate_process(self.process)
             thread.join(kill_timeout)
             if _is_alive(thread):
@@ -100,12 +105,7 @@ class Command(object):
 
 
 class ConnectedCommand(object):
-    def __init__(self,
-        process=None,
-        std_in=None,
-        std_out=None,
-        std_err=None):
-
+    def __init__(self, process=None, std_in=None, std_out=None, std_err=None):
         self._process = process
         self.std_in = std_in
         self.std_out = std_out
@@ -148,7 +148,6 @@ class ConnectedCommand(object):
         self._status_code = self._process.wait()
 
 
-
 class Response(object):
     """A command's response"""
 
@@ -161,7 +160,6 @@ class Response(object):
         self.std_out = None
         self.status_code = None
         self.history = []
-
 
     def __repr__(self):
         if len(self.command):
@@ -193,8 +191,9 @@ def expand_args(command):
     return command
 
 
-def run(command, data=None, timeout=None, kill_timeout=None, env=None, cwd=None):
-    """Executes a given commmand and returns Response.
+def run(command, data=None, timeout=None, kill_timeout=None, env=None,
+        cwd=None):
+    """Executes a given command and returns Response.
 
     Blocks until process is complete, or timeout is reached.
     """
@@ -228,7 +227,9 @@ def run(command, data=None, timeout=None, kill_timeout=None, env=None, cwd=None)
         history.append(response)
 
     cmd = Command(commands[-1])
-    out, err = cmd.run(data, timeout, kill_timeout, env, cwd, stdin=prev_stdout)
+    out, err = cmd.run(
+        data, timeout, kill_timeout, env, cwd, stdin=prev_stdout
+    )
 
     r = Response(process=cmd)
     r.command = cmd.cmd
@@ -248,7 +249,8 @@ def connect(command, data=None, env=None, cwd=None):
     environ = dict(os.environ)
     environ.update(env or {})
 
-    process = subprocess.Popen(command_str,
+    process = subprocess.Popen(
+        command_str,
         universal_newlines=True,
         shell=False,
         env=environ,
